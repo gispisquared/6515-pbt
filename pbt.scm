@@ -1,30 +1,3 @@
-;;; General API / toy test case:
-(define (my-sort l)
-  (if (null? l) '()
-    (insert (car l) (sort (cdr l)))))
-
-(define (insert val sorted-lst)
-  (cond
-    ((null? sorted-lst) (list val))
-    ((< val (car sorted-lst)) (cons val sorted-lst))
-    (else (cons (car sorted-lst) (insert val (cdr sorted-lst))))))
-
-(define (sorted-version? orig l)
-  (eq-vals? l (sort orig)))
-
-(define (eq-vals? l1 l2)
-  (or (and (null? l1) (null? l2))
-      (and (not (null? l1))
-           (not (null? l2))
-           (eq? (car l1) (car l2))
-           (eq-vals? (cdr l1) (cdr l2)))))
-
-(define integer-list-gen
-  (define list-len ((integer 1 100)))
-  (list-of (integer -1000 1000) list-len))
-
-(test my-sort sorted-version? integer-list-gen)
-
 ; How to specify the types of generated elements?
 ; Create a *generator language* in Scheme.
 (define number-tree-gen
@@ -56,11 +29,11 @@
 ; language without refrerence to generator-state and reproduce-state.
 
 (define (gen-new generator)
-  (define reproduce-state '())
+  (set! reproduce-state '())
   (generator))
 
 (define (gen-reproduce generator generator-state)
-  (define reproduce-state generator-state)
+  (set! reproduce-state generator-state)
   (generator))
 
 ; Design of the shrinker:
