@@ -1,17 +1,12 @@
-; atomic: boolean, integer, string, float, symbol
-; combination: cons-of, list-of, amb
-; other: random-choice, random-choices
-(define (sample-from generator)
-  (set! generator-state '())
-  (set! reproduce-state '())
-  (generator))
-
 (define (((make-atomic-generator rand-gen transform) . params))
   (let ((value
           (if (null? reproduce-state)
             (apply rand-gen params)
-            (car reproduce-state))))
-    (set! generator-state (cons value generator-state))
+            (begin
+              (let ((answer (car reproduce-state)))
+                (set! reproduce-state (cdr reproduce-state))
+                answer)))))
+    (set! generator-state (append generator-state (list value)))
     (transform value params)))
 
 (define integer
@@ -36,3 +31,35 @@
 
 (define ((symbol charset len))
   (intern ((string-gen charset len))))
+
+(define ((random-choice choices))
+  (let ((i (if (null? reproduce-state)
+             (random (length choices))
+             (car reproduce-state))))
+    (set! generator-state (cons i generator-state))
+    (list-ref choices i)))
+
+(define (probabilities-list len)
+  (if (= len 0)
+    '()
+    (append (list (random-real)) (probabilities (- len 1)))))
+
+(define ((choose choices size probabilities))
+  (fold
+    (lambda (x acc)
+      (let ((num-chosen (length acc))
+            (choice (list-ref choices x))
+            (prob (list-ref probabilities x)))
+        (if
+          (<= (/  (- size num-chosen) (- (length choices) x)) prob)
+          acc
+          (append acc (list choice)))))
+    '()
+    (iota (length choices))))
+
+(define ((random-choices choices size))
+  (let ((probabilities (if (null? reproduce-state)
+                         (probabilities-list (length choices))
+                         (car reproduce-state))))
+    (set! generator-state (cons probabilities generator-state))
+    (choose choices size probabilites)))

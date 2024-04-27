@@ -1,7 +1,8 @@
-;; tests list-of, integer
+;; tests list-of, cons-of, integer, string
+(load "load.scm")
 (define (my-sort l)
   (if (null? l) '()
-    (insert (car l) (cdr l)))))
+    (insert (car l) (my-sort (cdr l)))))
 
 (define (insert val sorted-lst)
   (cond
@@ -16,26 +17,30 @@
   (or (and (null? l1) (null? l2))
       (and (not (null? l1))
            (not (null? l2))
-           (eq? (car l1) (car l2))
+           (string=? (car l1) (car l2))
            (eq-vals? (cdr l1) (cdr l2)))))
 
-(define (integer-list-gen)
-  (define list-len ((integer 1 100)))
-  ((list-of (integer -1000 1000) list-len)))
-
-(test my-sort sorted-version? string-list-gen 100 100)
-
-;; tests cons-of, string
-(define (cons-list-of gen len)
-  (if (= len 0) (constant '())
-    (cons-of gen (cons-list-of gen (- len 1)))))
-
 (define (string-list-gen)
-  (define list-len ((integer 1 10)))
+  (define list-len ((restrict (lambda (x) (> x 5)) (integer 0 10))))
   (define (my-string-gen charset)
-    (define string-len ((integer 1 10)))
+    (define string-len ((integer 0 10)))
     (string-gen charset string-len))
-  ((cons-list-of (my-string-gen '("a" "b" "c")) list-len)))
+  ((list-of (my-string-gen '("a" "b" "c")) list-len)))
 
-(sample-from (cons-of (integer 1 10) (integer 1 10)))
-generator-state
+(pp (test my-sort sorted-version? string-list-gen 101 100))
+
+; tests amb, restrict, cons-of, list-of, integer
+(define (prime? n)
+  (and (exact-positive-integer? n)
+       (>= n 2)
+       (let loop ((k 2))
+         (or (> (square k) n)
+             (and (not (= (remainder n k) 0))
+                  (loop (+ k 1)))))))
+
+(define (prime-tree)
+  ((cons-of (restrict prime? (integer 0 100))
+            (list-of (amb prime-tree (constant '()) 0.5) 2))))
+
+(pp (sample-from prime-tree))
+(pp (shrink prime-tree generator-state))

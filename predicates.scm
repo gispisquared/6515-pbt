@@ -5,7 +5,9 @@
     (let ((val (generator)))
       (if (predicate val)
         (begin
-          (set! generator-state (cons generator-state original-state))
+          (set! generator-state (append original-state generator-state))
           val)
-        (try))))
+        (begin
+          (set! generator-state '())
+            (try)))))
   try)
