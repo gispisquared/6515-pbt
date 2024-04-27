@@ -19,67 +19,42 @@
            (eq? (car l1) (car l2))
            (eq-vals? (cdr l1) (cdr l2)))))
 
-(define integer-list
-  '(list-of integer 10 100))
+(define integer-list-gen
+  (define list-len ((integer 1 100)))
+  (list-of (integer -1000 1000) list-len))
 
-(test my-sort sorted-version? (make-generator integer-list))
+(test my-sort sorted-version? integer-list-gen)
 
-
-
-; How to specify the predicate?
-; Answer: create some language for specifying types. Example:
-; Atomic types: boolean, integer, string, float, null, symbol
-; Means of combination:
-; (cons-of)
-; (list-of) takes arguments min-length, max-length (default 1, 10)
-; (amb-gen) takes an argument probability (default 0.5)
-; Means of abstraction: eg
-; Actually we want to write this language in Scheme itself, so that we can call
-; it.
+; How to specify the types of generated elements?
+; Create a *generator language* in Scheme.
 (define number-tree-gen
-  (begin
-    (define value (restrict prime? number))
-    (define len (constant (number 1 10)))
-    (define number-tree
-      (amb-gen null
-               (cons-of value (list-of tree len len))))
-    (restrict restriction? number-tree)))
+  ; A generator of a fixed prime from 1 to 100
+  (define value (constant ((restrict prime? (number 1 100)))))
+  ; A generator of numbers from 1 to 10
+  (define len (number 1 10))
+  (define number-tree
+    ; Either
+    (amb
+      ; A generator of empty lists
+      (constant '())
+      ; A generator of conses, whose first element is value and whose second
+      ; element is a list of number trees with a length between 1 and 10
+      (cons-of value (list-of number-tree (len)))))
+  number-tree)
 
-(define (restrict predicate generator)
-  (define (try)
-    (let ((val (generator)))
-      (if (predicate val) val
-        (try))))
-  try)
+; Design of generators:
+; Look at reproduce-state. If it is empty, generate a new random object
+; according to the specification given. Otherwise, use reproduce-state to
+; generate an object previously generated. Either way, populate generator-state
+; with information such that (gen-reproduce generator generator-state) produces
+; the same value as the last time generator was called.
 
-(define (constant val) (lambda () val))
+; This is a somewhat ugly design (and you see the repercussions especially
+; in combinators.scm). The reason this design was chosen is that we want to
+; have access to the generator state inside the shrinker (so that we can
+; perturb it), but we want to be able to define generators in our generator
+; language without refrerence to generator-state and reproduce-state.
 
-(define (cons-of gen1 gen2)
-  (lambda () (cons (gen1) (gen2))))
-
-; How to design shrinker?
-; Keep a variable generator-state which contains a list of real numbers in
-; (0,1) corresponding to decisions
-; -> Might want to add additional structure
-; Proof of concept:
-(define global-state '(1 2 3))
-(define (add-state val)
-  (set! global-state (cons val global-state)))
-(add-state 5)
-global-state
-
-(define (add-states l)
-  (define current global-state)
-  (set! global-state '())
-  (map add-state l)
-  (define new global-state)
-  (set! global-state current)
-  (add-state new))
-
-(add-states '(1 2 3))
-global-state
-
-; The point is we want reproducibility:
 (define (gen-new generator)
   (define reproduce-state '())
   (generator))
@@ -88,69 +63,7 @@ global-state
   (define reproduce-state generator-state)
   (generator))
 
+; Design of the shrinker:
 (shrink generator original-state)
 ; -> a new thing generated according to generator which is a shrunk version of
 ; (gen-reproduce generator original-state)
-
-;;; Core tester:
-(define (test f property generator times)
-  (let lp ((n times))
-    (define generator-state '())
-    (if (eq? n 0) #t
-      (let* ((input (generator)) ; populates generator-state
-            (output (f input)))
-        (if (property input output)
-          (lp (- n 1))
-          (test-shrinks f property generator generator-state))))))
-
-(define (test-shrinks f property generator original-state)
-  (let lp ((n times))
-    (define generator-state '())
-    (if (eq? n 0) original-state
-      (let* ((input (shrink generator original-state)) ; populates generator-state
-            (output (f input)))
-        (if (property input output)
-          (lp (- n 1))
-          (test-shrinks f property generator generator-state))))))
-
-(define gen
-  (cons-of (list-of (integer 3 10) 5 10) (list-of boolean 2 4)))
-
-(define generator-state '())
-(gen)
-; generator-state:
-; ((7 0 4 2 3 1 4 6) . (2 #t #f))
-; returns:
-; ((3 7 5 6 4 7 9) . (#t #f))
-
-(gen-reproduce gen generator-state)
-; returns:
-; ((3 7 5 6 4 7 9) . (#t #f))
-
-(define (cons-of gen1 gen2)
-  (if (null? reproduce-state)
-    (begin
-      (define original-state generator-state)
-      (define cons-state (cons '() '()))
-      (set! generator-state '())
-      (define first (gen1))
-      (set-car! cons-state generator-state)
-      (set! generator-state '())
-      (define second (gen2))
-      (set-cdr! cons-state generator-state)
-      (set! generator-state (cons cons-state generator-state))
-      (cons first second))
-    (begin
-      (define original-state generator-state)
-      (define original-repdoduce reproduce-state)
-      (define cons-state (cons '() '()))
-      (set! generator-state '())
-      (set! reproduce-state (car original-reproduce))
-      (define first (gen1))
-      (set-car! cons-state generator-state)
-      (set! generator-state '())
-      (set! reproduce-state (cdr original-reproduce))
-      (define second (gen2))
-      (set-cdr! cons-state generator-state)
-      (set! generator-state (cons cons-state generator-state))
-      (cons first second)))
