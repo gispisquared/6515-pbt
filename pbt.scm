@@ -25,20 +25,6 @@
 (test my-sort sorted-version? (make-generator integer-list))
 
 
-;;; Core tester:
-(define (test f property generator times)
-  (let lp ((n times))
-    (if (eq? n 0) #t
-      (and (test-once f property generator times)
-           (lp (- n 1))))))
-
-(define (test-once f property input-spec)
-  (define generator-state)
-  (let* ((input (eval input-spec (the-environment)))
-         (output (apply f input)))
-    (or (property input output)
-        (shrink f property input input-spec generator-state))))
-
 
 ; How to specify the predicate?
 ; Answer: create some language for specifying types. Example:
@@ -75,6 +61,7 @@
 ; Keep a variable generator-state which contains a list of real numbers in
 ; (0,1) corresponding to decisions
 ; -> Might want to add additional structure
+; Proof of concept:
 (define global-state '(1 2 3))
 (define (add-state val)
   (set! global-state (cons val global-state)))
@@ -101,5 +88,69 @@ global-state
   (define reproduce-state generator-state)
   (generator))
 
-(shrink generator generator-state)
-; -> a new generator which only produces shrinks of generator-state
+(shrink generator original-state)
+; -> a new thing generated according to generator which is a shrunk version of
+; (gen-reproduce generator original-state)
+
+;;; Core tester:
+(define (test f property generator times)
+  (let lp ((n times))
+    (define generator-state '())
+    (if (eq? n 0) #t
+      (let* ((input (generator)) ; populates generator-state
+            (output (f input)))
+        (if (property input output)
+          (lp (- n 1))
+          (test-shrinks f property generator generator-state))))))
+
+(define (test-shrinks f property generator original-state)
+  (let lp ((n times))
+    (define generator-state '())
+    (if (eq? n 0) original-state
+      (let* ((input (shrink generator original-state)) ; populates generator-state
+            (output (f input)))
+        (if (property input output)
+          (lp (- n 1))
+          (test-shrinks f property generator generator-state))))))
+
+(define gen
+  (cons-of (list-of (integer 3 10) 5 10) (list-of boolean 2 4)))
+
+(define generator-state '())
+(gen)
+; generator-state:
+; ((7 0 4 2 3 1 4 6) . (2 #t #f))
+; returns:
+; ((3 7 5 6 4 7 9) . (#t #f))
+
+(gen-reproduce gen generator-state)
+; returns:
+; ((3 7 5 6 4 7 9) . (#t #f))
+
+(define (cons-of gen1 gen2)
+  (if (null? reproduce-state)
+    (begin
+      (define original-state generator-state)
+      (define cons-state (cons '() '()))
+      (set! generator-state '())
+      (define first (gen1))
+      (set-car! cons-state generator-state)
+      (set! generator-state '())
+      (define second (gen2))
+      (set-cdr! cons-state generator-state)
+      (set! generator-state (cons cons-state generator-state))
+      (cons first second))
+    (begin
+      (define original-state generator-state)
+      (define original-repdoduce reproduce-state)
+      (define cons-state (cons '() '()))
+      (set! generator-state '())
+      (set! reproduce-state (car original-reproduce))
+      (define first (gen1))
+      (set-car! cons-state generator-state)
+      (set! generator-state '())
+      (set! reproduce-state (cdr original-reproduce))
+      (define second (gen2))
+      (set-cdr! cons-state generator-state)
+      (set! generator-state (cons cons-state generator-state))
+      (cons first second)))
