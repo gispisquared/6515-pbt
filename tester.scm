@@ -4,23 +4,29 @@
 (define shrinking)
 (define shrunk)
 
-(define (test f property generator times shrink-times)
+(define (test f property generator times)
   (let lp ((n times))
     (if (eq? n 0) #t
       (let* ((input (sample-from generator)) ; populates generator-state
             (output (f input)))
         (if (property input output)
           (lp (- n 1))
-          (test-shrinks f property generator generator-state shrink-times))))))
+          (test-shrinks f property generator generator-state))))))
 
-(define (test-shrinks f property generator original-state times)
-  (let lp ((n times))
-    (if (eq? n 0) (reproduce generator original-state)
+(define (flatten l)
+  (cond ((pair? l) (append-map flatten l))
+        ((null? l) '())
+        (else (list l))))
+
+(define (test-shrinks f property generator original-state)
+  (let lp ((n 0))
+    (if (eq? n (length (flatten original-state)))
+      (reproduce generator original-state)
       (let* ((input (shrink generator original-state)) ; populates generator-state
             (output (f input)))
         (if (or shrinking (property input output))
-          (lp (- n 1))
-          (test-shrinks f property generator generator-state times))))))
+          (lp (+ n 1))
+          (test-shrinks f property generator generator-state))))))
 
 (define (sample-from generator)
   (set! generator-state '())
@@ -33,11 +39,6 @@
   (set! reproduce-state original-state)
   (set! shrinking #f)
   (generator))
-
-(define (flatten l)
-  (cond ((pair? l) (append-map flatten l))
-        ((null? l) '())
-        (else (list l))))
 
 (define (shrink generator original-state)
   (set! generator-state '())

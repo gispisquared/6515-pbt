@@ -28,7 +28,7 @@
     (string-gen charset string-len))
   ((list-of (my-string-gen '("a" "b" "c")) list-len)))
 
-(pp (test my-sort sorted-version? string-list-gen 100 100))
+(pp (test my-sort sorted-version? string-list-gen 100))
 
 ; tests amb, restrict, cons-of, list-of, integer
 (define (prime? n)
@@ -71,14 +71,14 @@
   (if (null? l) '()
     (insert (car l) (cdr l))))
 
-(pp (test my-sort sorted-version? string-list-gen 100 100))
+(pp (test my-sort sorted-version? string-list-gen 100))
 
 ; tests shrinking over amb
 (define (small-sum i o) (< (fold + 0 (flatten i)) 10))
 (pp (test values small-sum
-          (list-of (amb prime-tree (float 10 15) 0.1) 5) 100 100))
+          (list-of (amb prime-tree (float 10 15) 0.1) 5) 100))
 ; -> list of five trees
 
 (pp (test values small-sum
-          (list-of (amb (float 10 15) prime-tree 0.1) 5) 100 100))
+          (list-of (amb (float 10 15) prime-tree 0.1) 5) 100))
 ; -> list of five 10s
