@@ -1,11 +1,34 @@
+(define s:random random)
+(define s:random-real random-real)
+
+; Shrink things in (loose) order from first to last
+; Rationale: we want to shrink the lengths of lists before shrinking their
+; elements
+; We do some RNG because sometimes it's not obvious that something can't be
+; shrunk further without breaking a predicate
+(define ((make-random rand f) . params)
+  (if (null? reproduce-state)
+    (apply rand params)
+    (let ((old (car reproduce-state)))
+      (set! reproduce-state (cdr reproduce-state))
+      (set! old-val old)
+      (if shrinking
+        (begin
+          (cond
+            ((and
+               (> old 0)
+               (< (s:random-real) 0.5))
+             (set! shrinking #f)
+             (set! shrunk #t)
+             (f old))
+            (else old)))
+        old))))
+
+(define random (make-random s:random s:random))
+(define random-real (make-random s:random-real (lambda x 0)))
+
 (define (((make-atomic-generator rand-gen transform) . params))
-  (let ((value
-          (if (null? reproduce-state)
-            (apply rand-gen params)
-            (begin
-              (let ((answer (car reproduce-state)))
-                (set! reproduce-state (cdr reproduce-state))
-                answer)))))
+  (let ((value (apply rand-gen params)))
     (set! generator-state (append generator-state (list value)))
     (transform value params)))
 
@@ -33,31 +56,11 @@
   (intern ((string-gen (map symbol->string charset) len))))
 
 (define ((random-choice choices))
-  (let ((i (if (null? reproduce-state)
-             (random (length choices))
-             (car reproduce-state))))
-    (set! generator-state (cons i generator-state))
-    (list-ref choices i)))
-
-(define (reals-list len)
-  (map (lambda (x) (random-real)) (iota len)))
-
-(define (choose choices size reals)
-  (fold
-    (lambda (x acc)
-      (let ((num-chosen (length acc))
-            (choice (list-ref choices x))
-            (prob (list-ref reals x)))
-        (if
-          (<= (/  (- size num-chosen) (- (length choices) x)) prob)
-          acc
-          (cons choice acc))))
-    '()
-    (iota (length choices))))
+  (list-ref choices ((integer 0 (length choices)))))
 
 (define ((random-choices choices size))
-  (let ((reals (if (null? reproduce-state)
-                         (reals-list (length choices))
-                         (car reproduce-state))))
-    (set! generator-state (cons reals generator-state))
-    (choose choices size reals)))
+  (let lp ((chosen '()) (size size) (choices choices))
+    (if (null? choices) chosen
+      (if ((boolean (/ size (length choices))))
+        (lp (cons (car choices) chosen) (- size 1) (cdr choices))
+        (lp chosen size (cdr choices))))))
