@@ -34,9 +34,12 @@
   (define original-state generator-state)
   (define original-reproduce reproduce-state)
   (if reproduce
-    (set! reproduce-state '()))
-  (if reproduce
-    (set! reproduce-state ((random-choices (car original-reproduce) len))))
+    (begin
+      ; Here I'm using the random-choices function to choose which of the list
+      ; elements I keep. Therefore I need to reset reproduce-state so it'll
+      ; generate new booleans.
+      (set! reproduce-state '())
+      (set! reproduce-state ((random-choices (car original-reproduce) len)))))
   (define all-gen
     (let lp ((len len)
              (generated '())

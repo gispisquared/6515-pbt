@@ -2,7 +2,6 @@
 (define generator-state)
 (define reproduce-state)
 (define shrinking)
-(define choices '()) ; will throw an error if we try to divide incorrectly
 (define shrunk)
 
 (define (test f property generator times shrink-times)
@@ -44,7 +43,4 @@
   (set! generator-state '())
   (set! reproduce-state original-state)
   (set! shrinking #t)
-  ; + 1 to give the option of not shrinking at all
-  (set! choices
-      (+ 1 (length (flatten original-state))))
   (generator))

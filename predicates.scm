@@ -2,7 +2,6 @@
 (define ((restrict predicate generator))
   (define original-state generator-state)
   (define original-reproduce reproduce-state)
-  (define original-choices choices)
   (define original-shrinking shrinking)
   (define reproduce (not (null? original-reproduce)))
   (let lp ((times 0))
@@ -15,6 +14,5 @@
          val)
         (begin
           (set! reproduce-state original-reproduce)
-          (set! choices original-choices)
           (set! shrinking original-shrinking)
           (lp (+ times 1)))))))
