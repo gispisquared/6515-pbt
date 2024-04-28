@@ -27,10 +27,10 @@
   (make-atomic-generator
     (lambda params (random-real))
     (lambda (value params)
-      (+ (* value (- (cdr params) (car params))) (car params)))))
+      (+ (* value (- (cadr params) (car params))) (car params)))))
 
 (define ((symbol charset len))
-  (intern ((string-gen charset len))))
+  (intern ((string-gen (map symbol->string charset) len))))
 
 (define ((random-choice choices))
   (let ((i (if (null? reproduce-state)
@@ -39,27 +39,25 @@
     (set! generator-state (cons i generator-state))
     (list-ref choices i)))
 
-(define (probabilities-list len)
-  (if (= len 0)
-    '()
-    (append (list (random-real)) (probabilities (- len 1)))))
+(define (reals-list len)
+  (map (lambda (x) (random-real)) (iota len)))
 
-(define ((choose choices size probabilities))
+(define (choose choices size reals)
   (fold
     (lambda (x acc)
       (let ((num-chosen (length acc))
             (choice (list-ref choices x))
-            (prob (list-ref probabilities x)))
+            (prob (list-ref reals x)))
         (if
           (<= (/  (- size num-chosen) (- (length choices) x)) prob)
           acc
-          (append acc (list choice)))))
+          (cons choice acc))))
     '()
     (iota (length choices))))
 
 (define ((random-choices choices size))
-  (let ((probabilities (if (null? reproduce-state)
-                         (probabilities-list (length choices))
+  (let ((reals (if (null? reproduce-state)
+                         (reals-list (length choices))
                          (car reproduce-state))))
-    (set! generator-state (cons probabilities generator-state))
-    (choose choices size probabilites)))
+    (set! generator-state (cons reals generator-state))
+    (choose choices size reals)))

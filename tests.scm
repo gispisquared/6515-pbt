@@ -1,5 +1,6 @@
-;; tests list-of, cons-of, integer, string
+;; tests list-of, cons-of, integer, string, test
 (load "load.scm")
+(set! *random-state* (make-random-state 0))
 (define (my-sort l)
   (if (null? l) '()
     (insert (car l) (my-sort (cdr l)))))
@@ -44,3 +45,21 @@
 
 (pp (sample-from prime-tree))
 (pp (shrink prime-tree generator-state))
+
+; tests other generators
+
+(define symbol-gen (symbol '(a b c) 5))
+(pp (sample-from symbol-gen))
+(pp (shrink symbol-gen generator-state))
+
+(pp (sample-from (boolean 0.5)))
+(pp (shrink (boolean 0.5) generator-state))
+
+(pp (sample-from (float 5 10)))
+(pp (shrink (float 5 10) generator-state))
+
+(pp (sample-from (random-choices (iota 10) 3)))
+(pp (shrink (random-choices (iota 10) 3) generator-state))
+
+(pp (sample-from (random-choice (iota 10))))
+(pp (shrink (random-choice (iota 10)) generator-state))
