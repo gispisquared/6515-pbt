@@ -35,11 +35,11 @@
   (define original-reproduce reproduce-state)
   (if reproduce
     (begin
-      ; Here I'm using the g:random-choices function to choose which of the list
+      ; Here I'm using the g:random-subset function to choose which of the list
       ; elements I keep. Therefore I need to reset reproduce-state so it'll
       ; generate new g:booleans.
       (set! reproduce-state '())
-      (set! reproduce-state ((g:random-choices (car original-reproduce) len)))))
+      (set! reproduce-state ((g:random-subset (car original-reproduce) len)))))
   (define all-gen
     (let lp ((len len)
              (generated '())

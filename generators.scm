@@ -54,7 +54,7 @@
 (define ((g:random-choice choices))
   (list-ref choices ((g:integer 0 (length choices)))))
 
-(define ((g:random-choices choices size))
+(define ((g:random-subset choices size))
   (let lp ((chosen '()) (size size) (choices choices))
     (if (null? choices) chosen
       (if ((g:boolean (/ size (length choices))))

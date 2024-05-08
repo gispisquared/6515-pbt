@@ -60,8 +60,8 @@
 (pp (sample-from (g:float 5 10)))
 (pp (reproduce (g:float 5 10) generator-state))
 
-(pp (sample-from (g:random-choices (iota 10) 3)))
-(pp (reproduce (g:random-choices (iota 10) 3) generator-state))
+(pp (sample-from (g:random-subset (iota 10) 3)))
+(pp (reproduce (g:random-subset (iota 10) 3) generator-state))
 
 (pp (sample-from (g:random-choice (iota 10))))
 (pp (reproduce (g:random-choice (iota 10)) generator-state))
