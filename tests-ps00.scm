@@ -1,5 +1,10 @@
-(load "load")
-(load "ps00/code/load")
+;(load "ps00/code/load.scm")
+(load "ps00/code/p0utils.scm")
+(load "ps00/code/ps00.scm")
+(load "load.scm")
+
+(set! verbose #t)
+
 (define dh-system (public-dh-system 100))
 
 (define Alyssa (eg-receiver dh-system))
