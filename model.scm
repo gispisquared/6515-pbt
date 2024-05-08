@@ -14,8 +14,8 @@
 
 (define ((commands-gen commands-gens max-len))
   (define (command)
-    (((random-choice commands-gens))))
-  ((list-of command ((integer 0 max-len)))))
+    (((g:random-choice commands-gens))))
+  ((list-of command ((g:integer 0 max-len)))))
 
 (define ((run-both-models gen-model1 gen-model2) commands)
   (cons ((run-model gen-model1) commands) ((run-model gen-model2) commands)))

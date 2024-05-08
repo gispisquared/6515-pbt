@@ -20,14 +20,14 @@
         (else (list l))))
 
 (define (test-shrinks f property generator original-state)
-  (let lp ((n 0))
-    (if (eq? n (max 100 (length (flatten original-state))))
+  (let lp ((n (max 100 (length (flatten original-state)))))
+    (if (eq? n 0)
       (reproduce generator original-state)
       (let* ((input (shrink generator original-state)) ; populates generator-state
              (output (f input)))
         (cond
           ((or shrinking (property input output))
-           (lp (+ n 1)))
+           (lp (- n 1)))
           (else
             (cond
               (verbose

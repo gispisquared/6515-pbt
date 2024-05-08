@@ -13,8 +13,8 @@
   (eg-send-message message Alyssa))
 
 (define (string-generator)
-  (let ((str-len ((integer 0 100))))
-    ((string-gen (list "a" "b" "c" "d" "e") str-len))))
+  (let ((str-len ((g:integer 0 100))))
+    ((g:string (list "a" "b" "c" "d" "e") str-len))))
 
 (define (encrypt-decrypt-id? x y)
   (?eq x y))

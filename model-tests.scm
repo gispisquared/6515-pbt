@@ -45,13 +45,13 @@
   run-command)
 
 (define (gen-add)
-  (list 'add ((integer 0 10))))
+  (list 'add ((g:integer 0 10))))
 
 (define (gen-remove)
-  (list 'remove ((integer 0 10))))
+  (list 'remove ((g:integer 0 10))))
 
 (define (gen-has)
-  (list 'has ((integer 0 10))))
+  (list 'has ((g:integer 0 10))))
 
 (define (gen-commands)
   ((commands-gen (list gen-has gen-remove gen-add) 100)))

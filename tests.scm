@@ -1,6 +1,6 @@
 (load "load.scm")
 
-;; tests list-of, cons-of, integer, string, test
+;; tests g:list, g:cons, g:integer, string, test
 (define (my-sort l)
   (if (null? l) '()
     (insert (car l) (my-sort (cdr l)))))
@@ -22,15 +22,15 @@
            (eq-vals? (cdr l1) (cdr l2)))))
 
 (define (string-list-gen)
-  (define list-len ((restrict (lambda (x) (> x 5)) (integer 0 10))))
+  (define list-len ((restrict (lambda (x) (> x 5)) (g:integer 0 10))))
   (define (my-string-gen charset)
-    (define string-len ((integer 0 10)))
-    (string-gen charset string-len))
-  ((list-of (my-string-gen '("a" "b" "c")) list-len)))
+    (define string-len ((g:integer 0 10)))
+    (g:string charset string-len))
+  ((g:list (my-string-gen '("a" "b" "c")) list-len)))
 
 (pp (test my-sort sorted-version? string-list-gen 100))
 
-; tests amb, restrict, cons-of, list-of, integer
+; tests g:amb, restrict, g:cons, g:list, g:integer
 (define (prime? n)
   (and (exact-positive-integer? n)
        (>= n 2)
@@ -39,32 +39,32 @@
              (and (not (= (remainder n k) 0))
                   (loop (+ k 1)))))))
 
-; amb will shrink from second to first, so make sure the recursive case is
+; g:amb will shrink from second to first, so make sure the recursive case is
 ; second
 (define (prime-tree)
-  ((cons-of (restrict prime? (integer 0 100))
-            (list-of (amb (constant '()) prime-tree 0.5) 2))))
+  ((g:cons (restrict prime? (g:integer 0 100))
+            (g:list (g:amb (g:constant '()) prime-tree 0.5) 2))))
 
 (pp (sample-from prime-tree))
 (pp (reproduce prime-tree generator-state))
 
 ; tests other generators
 
-(define symbol-gen (symbol '(a b c) 5))
+(define symbol-gen (g:symbol '(a b c) 5))
 (pp (sample-from symbol-gen))
 (pp (reproduce symbol-gen generator-state))
 
-(pp (sample-from (boolean 0.5)))
-(pp (reproduce (boolean 0.5) generator-state))
+(pp (sample-from (g:boolean 0.5)))
+(pp (reproduce (g:boolean 0.5) generator-state))
 
-(pp (sample-from (float 5 10)))
-(pp (reproduce (float 5 10) generator-state))
+(pp (sample-from (g:float 5 10)))
+(pp (reproduce (g:float 5 10) generator-state))
 
-(pp (sample-from (random-choices (iota 10) 3)))
-(pp (reproduce (random-choices (iota 10) 3) generator-state))
+(pp (sample-from (g:random-choices (iota 10) 3)))
+(pp (reproduce (g:random-choices (iota 10) 3) generator-state))
 
-(pp (sample-from (random-choice (iota 10))))
-(pp (reproduce (random-choice (iota 10)) generator-state))
+(pp (sample-from (g:random-choice (iota 10))))
+(pp (reproduce (g:random-choice (iota 10)) generator-state))
 
 ; tests shrinking over predicate
 (define (my-sort l)
@@ -73,12 +73,12 @@
 
 (pp (test my-sort sorted-version? string-list-gen 100))
 
-; tests shrinking over amb
+; tests shrinking over g:amb
 (define (small-sum i o) (< (fold + 0 (flatten i)) 10))
 (pp (test values small-sum
-          (list-of (amb prime-tree (float 10 15) 0.1) 5) 100))
+          (g:list (g:amb prime-tree (g:float 10 15) 0.1) 5) 100))
 ; -> list of five trees
 
 (pp (test values small-sum
-          (list-of (amb (float 10 15) prime-tree 0.1) 5) 100))
+          (g:list (g:amb (g:float 10 15) prime-tree 0.1) 5) 100))
 ; -> list of five 10s
