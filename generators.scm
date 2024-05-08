@@ -3,7 +3,7 @@
 ; elements
 ; We do some RNG because sometimes it's not obvious that something can't be
 ; shrunk further without breaking a predicate
-(define ((make-random rand f) . params)
+(define ((make-random rand shrink) . params)
   (if (null? reproduce-state)
     (apply rand params)
     (let ((old (car reproduce-state)))
@@ -16,7 +16,7 @@
                (< (random-real) 0.5))
              (set! shrinking #f)
              (set! shrunk #t)
-             (f old))
+             (shrink old))
             (else old)))
         old))))
 
