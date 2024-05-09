@@ -6,12 +6,15 @@
 
 (define (test-property property f input timeout)
   (define done #f)
-  (register-timer-event timeout (lambda () (if (not done) (error "timed out"))))
+  (register-timer-event
+    timeout
+    (lambda () (if (not done) (error "timed out"))))
   (define result
     (guard
-      (condition (else (if (equal? (error-object-message condition) "timed out")
-                         'time-out 
-                         'internal-error)))
+      (condition
+        (else (if (equal? (error-object-message condition) "timed out")
+                'time-out
+                'internal-error)))
       (property input (f input))))
   (set! done #t)
   result)
@@ -23,9 +26,9 @@
   (if (default-object? timeout)
     (set! timeout 100))
   (let lp ((n times))
-    (if (eq? n 0) #t
+    (if (eq? n 0) 'passed
       (let ((result (test-property property f (sample-from generator) timeout)))
-        (if (eq? result #t) 
+        (if (eq? result #t)
           (lp (- n 1))
           (test-shrinks f property generator generator-state timeout))))))
 
@@ -46,11 +49,11 @@
           (else
             (cond
               (verbose
-                (cond ((eq? result 'time-out) 
+                (cond ((eq? result 'time-out)
                        (display "failed (timeout): "))
                       ((eq? result 'internal-error)
                        (display "failed (internal error): "))
-                      (else (display "failed ")))
+                      (else (display "failed: ")))
                 (pp input)))
             (test-shrinks f property generator generator-state timeout)))))))
 
