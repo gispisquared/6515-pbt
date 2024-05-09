@@ -1,18 +1,5 @@
-(define old-val)
 (define ((restrict predicate generator))
-  (define original-state generator-state)
-  (define original-reproduce reproduce-state)
-  (define original-shrinking shrinking)
-  (define reproduce (not (null? original-reproduce)))
-  (let lp ((times 0))
-    (if (> times 100) (error "Could not satisfy predicate"))
-    (set! generator-state '())
-    (let ((val (generator)))
-      (if (predicate val)
-        (begin
-         (set! generator-state (append original-state generator-state))
-         val)
-        (begin
-          (set! reproduce-state original-reproduce)
-          (set! shrinking original-shrinking)
-          (lp (+ times 1)))))))
+  (let ((val (generator)))
+    (if (predicate val)
+      val
+      (read-global-state)))) ; start backtracking

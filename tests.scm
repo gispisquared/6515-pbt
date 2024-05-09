@@ -50,6 +50,10 @@
 
 ; tests other generators
 
+(define cons-gen (g:cons (g:boolean 0.5) (g:boolean 0.5)))
+(pp (sample-from cons-gen))
+(pp (reproduce cons-gen generator-state))
+
 (define symbol-gen (g:symbol '(a b c) 5))
 (pp (sample-from symbol-gen))
 (pp (reproduce symbol-gen generator-state))
@@ -73,6 +77,10 @@
 
 (pp (test my-sort sorted-version? string-list-gen 100))
 
+(define (flatten l)
+  (cond ((pair? l) (append-map flatten l))
+        ((null? l) '())
+        (else (list l))))
 ; tests shrinking over g:amb
 (define (small-sum i o) (< (fold + 0 (flatten i)) 10))
 (pp (test values small-sum
@@ -82,3 +90,17 @@
 (pp (test values small-sum
           (g:list (g:amb (g:float 10 15) prime-tree 0.1) 5) 100))
 ; -> list of five 10s
+
+(pp (sample-from string-list-gen))
+(pp (reproduce string-list-gen generator-state))
+
+; tests infinite loop
+(set! verbose #t)
+(define (loop-forever . a) (loop-forever))
+(pp (test loop-forever small-sum (g:integer 0 10) 1))
+
+; tests shrinking to longer lists
+(define (anti-shrink)
+  (define list-len (- 10 ((g:integer 0 10))))
+  ((g:list (g:integer 0 10) list-len)))
+(pp (test values small-sum anti-shrink))

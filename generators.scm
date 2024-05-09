@@ -3,29 +3,42 @@
 ; elements
 ; We do some RNG because sometimes it's not obvious that something can't be
 ; shrunk further without breaking a predicate
-(define ((make-random rand shrink) . params)
-  (if (null? reproduce-state)
-    (apply rand params)
-    (let ((old (car reproduce-state)))
-      (set! reproduce-state (cdr reproduce-state))
-      (if shrinking
-        (begin
+(define ((make-random rand shrink name) . params)
+  (define reproduce
+    (and
+      (pair? reproduce-state)
+      (equal? (caar reproduce-state) (cons name params))))
+  (call/cc save-global-state) ; backtrack to here
+  (cons (cons name params)
+    (if (not reproduce)
+      (begin
+        (if (pair? reproduce-state)
+          (set! reproduce-state (cdr reproduce-state)))
+        (apply rand params))
+      (let ((old (cdar reproduce-state)))
+        (set! reproduce-state (cdr reproduce-state))
+        (if shrinking
           (cond
             ((and
                (> old 0)
                (< (random-real) 0.5))
              (set! shrinking #f)
-             (set! shrunk #t)
              (shrink old))
-            (else old)))
-        old))))
+            (else
+              (set! reproduce #f)
+              ; when we backtrack, reproduce will now be #f
+              ; so if the old value doesn't work we generate new random values
+              old))
+          old)))))
 
-(define g:random (make-random random random))
-(define g:random-real (make-random random-real (lambda x 0)))
+(define g:random (make-random random random 'random))
+(define g:random-real (make-random random-real (lambda x 0) 'random-real))
 
 (define (((make-atomic-generator rand-gen transform) . params))
-  (let ((value (apply rand-gen params)))
-    (set! generator-state (append generator-state (list value)))
+  (let* ((name-and-value (apply rand-gen params))
+         (name (car name-and-value))
+         (value (cdr name-and-value)))
+    (set! generator-state (append generator-state (list name-and-value)))
     (transform value params)))
 
 (define g:integer

@@ -1,3 +1,4 @@
+(load "state.scm")
 (load "combinators.scm")
 (load "generators.scm")
 (load "tester.scm")
