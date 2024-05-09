@@ -13,7 +13,9 @@
   (let ((state-to-read (car continuations)))
     (set-car! (cdar continuations) (+ 1 (cadar continuations)))
     ; backtrack further if necessary:
-    (if (> (cadar continuations) 100) (read-global-state))
+    (cond ((> (cadar continuations) 100)
+           (set! continuations (cdr continuations))
+           (read-global-state)))
     ; restore the global state present at that time:
     (set! generator-state (third state-to-read))
     (set! reproduce-state (fourth state-to-read))

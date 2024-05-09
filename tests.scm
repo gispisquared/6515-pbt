@@ -95,7 +95,6 @@
 (pp (reproduce string-list-gen generator-state))
 
 ; tests infinite loop
-(set! verbose #t)
 (define (loop-forever . a) (loop-forever))
 (pp (test loop-forever small-sum (g:integer 0 10) 1))
 
@@ -104,3 +103,12 @@
   (define list-len (- 10 ((g:integer 0 10))))
   ((g:list (g:integer 0 10) list-len)))
 (pp (test values small-sum anti-shrink))
+
+; tests backtracking
+(define (gen-pythag)
+  (define a ((g:integer 1 100)))
+  (define b ((g:integer 1 100)))
+  (define c ((restrict (lambda (c) (= (+ (* a a) (* b b)) (* c c)))
+                       (g:integer 1 100))))
+  (list a b c))
+(pp (sample-from gen-pythag))
