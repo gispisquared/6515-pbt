@@ -75,7 +75,11 @@
     (set! reproduce-state (cdr original-reproduce)))
   (car all-gen))
 
-(define ((g:amb gen1 gen2 prob))
+(define ((g:amb gen1 gen2 #!optional prob))
+  (if (default-object? prob) (set! prob 0.5))
   (if ((g:boolean prob)) (gen1) (gen2)))
+
+(define ((g:one-of gens))
+  (((g:random-choice gens))))
 
 (define ((g:constant t)) t)

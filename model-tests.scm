@@ -124,13 +124,13 @@
            (sorted? (cdr l)))))
 
 (define (gen-add-str)
-  (list 'add ((string-gen '("a" "b" "c") 5))))
+  (list 'add ((g:string '("a" "b" "c") 5))))
 
 (pp (test (run-model binary-tree)
           (lambda (in out)
             (every (lambda (i o)
                      (or (eq? (car i) 'add) (sorted? o))) in out))
-          (commands-gen (list gen-add-str (constant '(sorted))) 100)
+          (commands-gen (list gen-add-str (g:constant '(sorted))) 100)
           100))
 ; -> ((add "baaaa") (add "aaaaa") (sorted))
 
@@ -164,7 +164,7 @@
           (lambda (in out)
             (every (lambda (i o)
                      (or (eq? (car i) 'add) (sorted? o))) in out))
-          (commands-gen (list gen-add-str (constant '(sorted))) 100)
+          (commands-gen (list gen-add-str (g:constant '(sorted))) 100)
           100))
 ; -> works
 
@@ -184,7 +184,7 @@
 (pp (test (run-both-models binary-tree sorted-list)
           (lambda (in out)
             (equal? (car out) (cdr out)))
-          (commands-gen (list gen-add-str (constant '(sorted))) 100)
+          (commands-gen (list gen-add-str (g:constant '(sorted))) 100)
           100))
 ; -> ((add "aaaaa") (add "aaaaa") (sorted))
 
@@ -216,6 +216,6 @@
 (pp (test (run-both-models binary-tree sorted-list)
           (lambda (in out)
             (equal? (car out) (cdr out)))
-          (commands-gen (list gen-add-str (constant '(sorted))) 100)
+          (commands-gen (list gen-add-str (g:constant '(sorted))) 100)
           100))
 ; -> works
