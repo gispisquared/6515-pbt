@@ -79,7 +79,7 @@
   (if (default-object? prob) (set! prob 0.5))
   (if ((g:boolean prob)) (gen1) (gen2)))
 
-(define ((g:one-of gens))
+(define ((g:one-of . gens))
   (((g:random-choice gens))))
 
 (define ((g:constant t)) t)

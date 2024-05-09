@@ -129,5 +129,3 @@ reproduce-state
   (error "fail"))
 (set! verbose #t)
 (pp (test error-producer (lambda (x y) #f) (g:integer 0 10)))
-
-
