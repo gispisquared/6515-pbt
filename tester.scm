@@ -5,16 +5,16 @@
 (define verbose #f)
 
 (define (test-property property f input timeout)
-  ; TODO add timeouts
   (define done #f)
-  (register-timer-event 100 (lambda () (if (not done) (error "timed out"))))
+  (register-timer-event timeout (lambda () (if (not done) (error "timed out"))))
   (define result
     (guard
-      (condition (else #f))
+      (condition (else (if (equal? (error-object-message condition) "timed out")
+                         'time-out 
+                         'internal-error)))
       (property input (f input))))
   (set! done #t)
   result)
-
 
 
 (define (test f property generator #!optional times timeout)
@@ -24,11 +24,10 @@
     (set! timeout 100))
   (let lp ((n times))
     (if (eq? n 0) #t
-      (if (test-property property f
-                         (sample-from generator) ; populates generator-state
-                         timeout)
-        (lp (- n 1))
-        (test-shrinks f property generator generator-state timeout)))))
+      (let ((result (test-property property f (sample-from generator) timeout)))
+        (if (eq? result #t) 
+          (lp (- n 1))
+          (test-shrinks f property generator generator-state timeout))))))
 
 (define (num-leaves l)
   (cond ((pair? l) (+ (num-leaves (car l)) (num-leaves (cdr l))))
@@ -39,14 +38,19 @@
   (let lp ((n (max 100 (num-leaves original-state))))
     (if (eq? n 0)
       (reproduce generator original-state)
-      (let ((input (shrink generator original-state))) ; populates generator-state
+      (let* ((input (shrink generator original-state)) ; populates gen state
+             (result (test-property property f input timeout)))
         (cond
-          ((or shrinking (test-property property f input timeout))
+          ((or shrinking (eq? result #t))
            (lp (- n 1)))
           (else
             (cond
               (verbose
-                (display "failed ")
+                (cond ((eq? result 'time-out) 
+                       (display "failed (timeout): "))
+                      ((eq? result 'internal-error)
+                       (display "failed (internal error): "))
+                      (else (display "failed ")))
                 (pp input)))
             (test-shrinks f property generator generator-state timeout)))))))
 

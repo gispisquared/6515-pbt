@@ -112,3 +112,22 @@
                        (g:integer 1 100))))
   (list a b c))
 (pp (sample-from gen-pythag))
+
+(define (random-length-list-and-float)
+  ((g:cons
+ 	(g:list (g:integer 0 10) ((g:integer 0 5)))
+ 	(g:float 0 5))))
+(sample-from random-length-list-and-float)
+generator-state
+(reproduce random-length-list-and-float generator-state)
+(shrink random-length-list-and-float reproduce-state)
+reproduce-state
+
+
+; tests error handling: print (internal error) on an error in f
+(define (error-producer x)
+  (error "fail"))
+(set! verbose #t)
+(pp (test error-producer (lambda (x y) #f) (g:integer 0 10)))
+
+
