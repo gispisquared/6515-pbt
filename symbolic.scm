@@ -47,7 +47,7 @@
 
 (define symbolic-and-values
   (test simplification-works
-        (lambda x (cadr x))
+        (lambda (in out) out)
         gen-symbolic-and-values
         1000
         1000))

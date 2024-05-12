@@ -113,6 +113,14 @@
   (list a b c))
 (pp (sample-from gen-pythag))
 
+(define (gen-pythag-assert)
+  (define a ((g:integer 1 100)))
+  (define b ((g:integer 1 100)))
+  (define c ((g:integer 1 100)))
+  (assert (= (+ (* a a) (* b b)) (* c c)))
+  (list a b c))
+(pp (sample-from gen-pythag-assert))
+
 (define (random-length-list-and-float)
   ((g:cons
  	(g:list (g:integer 0 10) ((g:integer 0 5)))

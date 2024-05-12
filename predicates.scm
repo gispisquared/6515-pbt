@@ -1,5 +1,8 @@
+(define (assert condition)
+  (if (not condition)
+    (read-global-state)))
+
 (define ((restrict predicate generator))
-  (let ((val (generator)))
-    (if (predicate val)
-      val
-      (read-global-state)))) ; start backtracking
+  (define val (generator))
+  (assert (predicate val))
+  val)
