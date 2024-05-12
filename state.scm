@@ -1,6 +1,5 @@
 ; Save state, for backtracking
 (define continuations '())
-(define unitialised '())
 
 (define (save-global-state k)
   (set! continuations
@@ -20,4 +19,4 @@
     (set! generator-state (third state-to-read))
     (set! reproduce-state (fourth state-to-read))
     (set! shrinking (fifth state-to-read))
-    ((first state-to-read) unitialised))) ; call the saved continuations
+    ((first state-to-read) #f))) ; call the saved continuations

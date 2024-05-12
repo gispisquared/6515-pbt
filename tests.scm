@@ -22,7 +22,7 @@
            (eq-vals? (cdr l1) (cdr l2)))))
 
 (define (string-list-gen)
-  (define list-len ((restrict (lambda (x) (> x 5)) (g:integer 0 10))))
+  (define list-len ((g:restrict (lambda (x) (> x 5)) (g:integer 0 10))))
   (define (my-string-gen charset)
     (define string-len ((g:integer 0 10)))
     (g:string charset string-len))
@@ -42,7 +42,7 @@
 ; g:amb will shrink from second to first, so make sure the recursive case is
 ; second
 (define (prime-tree)
-  ((g:cons (restrict prime? (g:integer 0 100))
+  ((g:cons (g:restrict prime? (g:integer 0 100))
             (g:list (g:amb (g:constant '()) prime-tree 0.5) 2))))
 
 (pp (sample-from prime-tree))
@@ -108,7 +108,7 @@
 (define (gen-pythag)
   (define a ((g:integer 1 100)))
   (define b ((g:integer 1 100)))
-  (define c ((restrict (lambda (c) (= (+ (* a a) (* b b)) (* c c)))
+  (define c ((g:restrict (lambda (c) (= (+ (* a a) (* b b)) (* c c)))
                        (g:integer 1 100))))
   (list a b c))
 (pp (sample-from gen-pythag))
@@ -117,9 +117,16 @@
   (define a ((g:integer 1 100)))
   (define b ((g:integer 1 100)))
   (define c ((g:integer 1 100)))
-  (assert (= (+ (* a a) (* b b)) (* c c)))
+  (g:assert (= (+ (* a a) (* b b)) (* c c)))
   (list a b c))
 (pp (sample-from gen-pythag-assert))
+
+(define gen-pythag-restrict
+  (g:restrict
+    (lambda (l) (= (+ (* (first l) (first l)) (* (second l) (second l)))
+                   (* (third l) (third l))))
+    (g:list (g:integer 1 100) 3)))
+(pp (sample-from gen-pythag-restrict))
 
 (define (random-length-list-and-float)
   ((g:cons

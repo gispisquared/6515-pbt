@@ -1,8 +1,8 @@
-(define (assert condition)
+(define (g:assert condition)
   (if (not condition)
     (read-global-state)))
 
-(define ((restrict predicate generator))
+(define ((g:restrict predicate generator))
   (define val (generator))
-  (assert (predicate val))
+  (g:assert (predicate val))
   val)

@@ -1,4 +1,3 @@
-(load "p0utils.scm")
 
 ;; Through the examples, it looks like the modulo operator is closer to what is
 ;; described in the problem set. Remainder is similar, but it looks (remainder a
@@ -50,7 +49,7 @@
 ; exptmod is a recursive algorithm that grows in Theta(log n) in both time and
 ; space.
 
-(define (even? n) 
+(define (even? n)
   (= (remainder n 2) 0))
 
 (define (exptmod p)
@@ -59,8 +58,8 @@
       (mod* x x))
     (define (em base exponent)
       (if (= exponent 0) 1
-      (if (even? exponent) 
-        (square (em base (/ exponent 2))) 
+      (if (even? exponent)
+        (square (em base (/ exponent 2)))
         (mod* base (em base (- exponent 1))))))
     em))
 
@@ -79,7 +78,7 @@
 
 ;; (random-k-digit-number 1) ; -> 1
 ;; (random-k-digit-number 3) ; -> 938
-;; (random-k-digit-number 3) ; -> 773 
+;; (random-k-digit-number 3) ; -> 773
 ;; (random-k-digit-number 50) ; -> 81738193025220370877007386144933212352044692612124
 
 (define (count-digits n)
@@ -104,7 +103,7 @@
 ;; (big-random 1) ; -> 0
 ;; (big-random (expt 10 40)) ; -> 5871120712712673243809644338398444626104
 
-; slow prime is an O(n) space and time recursive algorithm 
+; slow prime is an O(n) space and time recursive algorithm
 ; checking up to sqrt(n) would make this an O(n^1/2) algorithm
 ; checking only odd factors would theoretically halve the order of growth, but
 ; would not change asymptotic complexity.
@@ -123,8 +122,8 @@
     (prime-test-once p)
     (and (prime-test-n-times p (- n 1)) (prime-test-once p))))
 
-(define prime? 
-  (lambda (p) 
+(define prime?
+  (lambda (p)
     (if (or (= p 0) (= p 1))
       #f
       (prime-test-n-times p prime-test-iterations))))
@@ -141,7 +140,7 @@
 ; space and time.
 ; we use a recursive implementation.
 
-(define (random-k-digit-prime k) 
+(define (random-k-digit-prime k)
   (let ((maybe-prime (random-k-digit-number k)))
     (if (prime? maybe-prime)
       maybe-prime

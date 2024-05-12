@@ -21,4 +21,4 @@
 
 (send-alyssa "")
 
-(test send-alyssa equal? string-generator 100)
+(test send-alyssa equal? string-generator 100 10000)
