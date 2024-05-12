@@ -1,11 +1,13 @@
 ; Save state, for backtracking
 (define continuations '())
 
-(define (save-global-state k)
-  (set! continuations
-    (cons
-      (list k 0 generator-state reproduce-state shrinking)
-      continuations)))
+(define (save-global-state)
+  (call/cc
+    (lambda (k)
+      (set! continuations
+        (cons
+          (list k 0 generator-state reproduce-state shrinking)
+          continuations)))))
 
 (define (read-global-state)
   (if (null? continuations) (error "No more backtracking possible!"))

@@ -41,7 +41,7 @@
   (define original-state generator-state)
   (define original-reproduce reproduce-state)
   ; backtrack to generating a different subset if necessary
-  (call/cc save-global-state)
+  (save-global-state)
   (if reproduce
     (begin
       ; Here I'm using the g:random-subset function to choose which of the list

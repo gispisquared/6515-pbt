@@ -4,7 +4,7 @@
 ; We do some RNG because sometimes it's not obvious that something can't be
 ; shrunk further without breaking a predicate
 (define ((make-random rand shrink name) . params)
-  (call/cc save-global-state) ; backtrack to here
+  (save-global-state) ; backtrack to here
   (define reproduce
     (and
       (pair? reproduce-state)
