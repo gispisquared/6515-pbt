@@ -1,0 +1,19 @@
+\section{Conclusion}
+
+\subsection{Future work}
+
+\subsubsection{Syntactic closure}
+
+While it should be possible to test any program in our framework, there are potential issues when it comes to naming. If a program supplied to our \verb|test| uses names that conflict with our internal functions, we may get naming conflicts that result in unintended behavior. One solution to this would be to run the functions on the generated inputs inside a syntactic closure, assigning unused fresh names to each symbol. 
+
+\subsubsection{Better shrinking}
+
+The shrinker we have written adequately shrinks most inputs, though there are many heuristics that could be added to converge on failing inputs with higher probability. Given a large failing example, we do try to shrink the values and the size of collections, but certain mutations might offer a larger chance of a successful shrink.
+
+\subsubsection{Testing other behavior}
+
+Currently, our properties can test that the output of a function on an input has some property, but there are functions that have other effects that this framework currently cannot test. Though it is possible to write wrappers around tested functions in order to simulate this functionality, there are many features and syntactic sugars that we could add to make the user experience more streamlined.
+
+\subsection{Conclusion}
+
+We hope that this property based testing framework provides a solution to testing programs. The framework is robust in its ability to produce complex inputs and properties, and is capable of producing counterexamples to non-trivial programs.

@@ -1,0 +1,364 @@
+
+\section{Implementation}
+
+\subsection{Generator}
+
+Our initial design for a generator simply created a random input each time it was called. However, if we are shrinking a generated value it is helpful to have state saved so that a generated value can be reproduced and perturbed slightly. This state should be accessible whether the generator was called at a top level, or allocated within another generator, so that composed generators can still be reproduced.
+
+Because generators need access to state regardless of where they are called, we use global variables \verb|generator-state| and \verb|reproduce-state| to read and write state. Every time a generator is called, it saves information allowing the behavior to be recreated to \verb|generator-state|. To reproduce values, we copy the state from \verb|generator-state| to \verb|reproduce-state|, at which point the generator knows to reproduce a value from state. We also have a global boolean value \verb|shrinking| which indicates to the generator whether it should shrink the input.
+
+\subsubsection{Initializing state}
+
+We set the state in our functions \verb|sample-from|, \verb|reproduce|, and \verb|shrink|:
+\begin{lstlisting}
+(define (sample-from generator)
+  (set! generator-state '())
+  (set! reproduce-state '())
+  (set! shrinking #f)
+  (generator))
+
+(define (reproduce generator original-state)
+  (set! generator-state '())
+  (set! reproduce-state original-state)
+  (set! shrinking #f)
+  (generator))
+
+(define (shrink generator original-state)
+  (set! generator-state '())
+  (set! reproduce-state original-state)
+  (set! shrinking #t)
+  (generator))
+\end{lstlisting}
+In \verb|sample-from|, we clear the \verb|generator-state| and \verb|reproduce-state|, and set \verb|shrinking| to be false. This prompts the generator to create a fresh value when it is called. In \verb|reproduce|, we copy the \verb|original-state| into \verb|reproduce-state|, so that the generator sees that it is in ``reproduce mode'' when it generates its next value. Lastly, \verb|shrink| sets the \verb|shrinking| value to true, so that the generator attempts to shrink the value it sees in its \verb|reproduce-state|.
+
+\subsubsection{Saving State}
+
+When called, the generators save state to the \verb|generator-state| to keep track of which random values they used. We do the work for this in our \verb|make-atomic-generator| function, which we use to create our primitive generator constructors.
+
+\begin{lstlisting}
+(define (((make-atomic-generator rand-gen transform) 
+                                                . params))
+  (let* ((name-and-value (apply rand-gen params))
+         (name (car name-and-value))
+         (value (cdr name-and-value)))
+    (set! generator-state 
+        (append generator-state (list name-and-value)))
+    (transform value params)))
+\end{lstlisting}
+
+In our \verb|make-atomic-generator|, we take our random generator and a function to transform the input. The generator applies the \verb|params| to \verb|rand-gen|, and sets \verb|generator-state| to be the current \verb|generator-state|, with the generated value appended at the end. We append the value as opposed to rewriting it so that successive generated values can all be reproduced. Then at the end the transformation is applied.
+
+The primitive \verb|g:integer|, along with \verb|g:float| and \verb|g:boolean| are written with \verb|make-atomic-generator|:
+\begin{lstlisting}
+(define g:integer
+  (make-atomic-generator
+    (lambda (mn mx) (g:random (- mx mn)))
+    (lambda (value params) (+ value (car params)))))
+\end{lstlisting}
+
+Our other generators use these three generators within them, which write to state and allow us to reconstruct values. For example our \verb|g:random-choice| uses \verb|g:integer|, which writes to state which choice it took:
+
+\begin{lstlisting}
+(define ((g:random-choice choices))
+  (list-ref choices ((g:integer 0 (length choices)))))
+\end{lstlisting}
+
+And our \verb|g:string| uses random choice:
+\begin{lstlisting}
+(define ((g:string charset len))
+  (string-append*
+    ((g:list (g:random-choice charset) len))))
+\end{lstlisting}
+
+\subsubsection{Reading State}
+
+We do the work for reading state in calls to \verb|random| and \verb|random-real|, which have the following behavior:
+\begin{lstlisting}
+(define (g:random)
+  (if (null? reproduce-state)
+    (random)
+    (let ((old-val (car reproduce-state)))
+      (set! reproduce-state (cdr reproduce-state))
+      old-val)))
+\end{lstlisting}
+
+If the \verb|reproduce-state| is null, we want to create a new random value. If we do have contents in the reproduce state, we reproduce that old value, take it out of the reproduce state, and return the old value instead of producing a random one.
+
+We implement \verb|g:random| and \verb|g:random-real| using an auxiliary function \verb|make-random| as shown below, with details about shrinking omitted.
+
+% talk about why we store name and params
+% (the idea is that if a shrink goes over a branch in the user-provided generator and eg we are now calling random-real instead of random, or we're calling (random 0 10) instead of (random 0 100), we would like to detect this and get out of reproduce mode)
+
+\verb|make-random| keeps track of a name along with the parameters in the state. This way, even if there is a branch in the user-provided generator that is not indicated in our state, we will be able to tell that we are calling the wrong random generator. For example, if we see that we are calling \verb|(random 0 10)| instead of \verb|(random 5 10)|, or \verb|random| instead of \verb|random-real|, we will know to exit reproduce mode.
+
+\begin{lstlisting}[language=lisp]
+(define ((make-random rand shrink name) . params)
+  ;; Check if we are in "reproduce mode"
+  (define reproduce
+    (and
+      (pair? reproduce-state)
+      (equal? (caar reproduce-state) (cons name params))))
+  ...
+  (cons (cons name params)
+    (if (not reproduce)
+      ;; If we are not, then we create a new value
+      (begin
+        (if (pair? reproduce-state)
+          (set! reproduce-state (cdr reproduce-state)))
+        (apply rand params))
+      ;; If we are, reproduce the old one
+      (let ((old (cdar reproduce-state)))
+        (set! reproduce-state (cdr reproduce-state))
+        ...
+          old)))))
+\end{lstlisting}
+
+\verb|g:random| is then simply defined as
+\begin{lstlisting}
+(define g:random (make-random random random 'random))
+\end{lstlisting}
+
+Given this, we are able to generate and then reproduce values:
+
+\begin{lstlisting}[language=lisp]
+(define symbol-gen (g:symbol '(a b c) 5))
+(sample-from symbol-gen) ; => 'aacbb
+(reproduce symbol-gen generator-state)) ; => 'aacbb
+
+(sample-from (g:random-subset (iota 10) 3)) ; => (7 5 0)
+(reproduce 
+  (g:random-subset (iota 10) 3) generator-state) ; => (7 5 0)
+\end{lstlisting}
+
+\subsubsection{Predicates and Assertions}
+
+Initially, a predicate was simply a way of restricting the output of a generator so that it satisfies a certain condition: specifically, \verb|(g:restrict pred gen)| creates a new generator restricted to values that satisfy the predicate.
+
+However, when the predicates interact with previously generated values, it is possible that \verb|gen| cannot generate a value satisfying \verb|pred|. For example, consider the following generator for Pythagorean triples:
+
+\begin{lstlisting}[language=lisp]
+(define (gen-pythag)
+  (define a ((g:integer 1 100)))
+  (define b ((g:integer 1 100)))
+  (define c ((g:restrict
+                (lambda (c)
+                  (= (+ (square a) (square b))
+                     (square c)))
+                (g:integer 1 100))))
+  (list a b c))
+\end{lstlisting}
+
+If \verb|restrict| only retries the generator until success, this would likely fall into an infinite loop (since not all values of \verb|a| and \verb|b| allow a value of \verb|c| satisfying the conditions). In this case, it is possible to write a generator that works with this behaviour of \verb|restrict|:
+
+\begin{lstlisting}[language=lisp]
+(define gen-pythag-restrict
+  (g:restrict
+    (lambda (l) (= (+ (square (first l)) (square (second l)))
+                   (square (third l))))
+    (g:list (g:integer 1 100) 3)))
+\end{lstlisting}
+
+However, in larger generators, this would have worse performance and shrinking behaviour since it would need to regenerate all of the variables that a predicate depends on in order to test the predicate again. (For example, if instead of generating Pythagorean triples we wanted to generate a 10-element list such that the sum of the squares of the first 9 elements equals the square of the 10th, it would take a long time to generate this list by chance since the program would simply try random 10-element lists.)
+
+Instead, we define a backtracking-based restriction system based on the \verb|amb| system presented in class. The entry point is \verb|g:assert|, which tests a condition and starts backtracking to the last saved state if the condition is not met:
+
+\begin{lstlisting}[language=lisp]
+(define (g:assert condition)
+  (if (not condition)
+    (read-global-state)))
+\end{lstlisting}
+
+This function \verb|g:assert| also provides a nice way to write conditions that depend on multiple generated values:
+\begin{lstlisting}[language=lisp]
+(define (gen-pythag-assert)
+  (define a ((g:integer 1 100)))
+  (define b ((g:integer 1 100)))
+  (define c ((g:integer 1 100)))
+  (g:assert (= (+ (square a) (square b)) (square c)))
+  (list a b c))
+\end{lstlisting}
+
+Now \verb|g:restrict| is easy to define in terms of \verb|g:assert|:
+\begin{lstlisting}[language=lisp]
+(define ((g:restrict predicate generator))
+  (define val (generator))
+  (g:assert (predicate val))
+  val)
+\end{lstlisting}
+
+To backtrack, we keep a stack of continuations that also includes information about the global state at the time the continuation was saved, and how many times the continuation has been called:
+\begin{lstlisting}[language=lisp]
+(define continuations '())
+(define (save-global-state)
+  (call/cc
+    (lambda (k)
+      (set! continuations
+        (cons
+          (list k 0 generator-state reproduce-state shrinking)
+          continuations)))))
+\end{lstlisting}
+
+Now by calling \verb|(save-global-state)|, we save the current state to the stack. In particular, we do this at the start of our \verb|make-random| function:
+\begin{lstlisting}[language=lisp]
+(define ((make-random rand shrink name) . params)
+  (save-global-state) ; backtrack to here
+  ...)
+\end{lstlisting}
+
+If a condition we are asserting fails, we can then backtrack to the saved state at the front of the stack. To break out of infinite loops, once a continuation has been called 100 times we remove it from the stack. The function \verb|(read-global-state)| responsible for this is defined as follows:
+
+\begin{lstlisting}[language=lisp]
+(define (read-global-state)
+  (if (null? continuations) (error "No more backtracking possible - assert could not be satisfied"))
+  (let ((state-to-read (car continuations)))
+    ; increment how many times the continuation has been called
+    (set-car! (cdar continuations) 
+              (+ 1 (cadar continuations)))
+    ; backtrack further if necessary:
+    (cond ((> (cadar continuations) 100)
+           (set! continuations (cdr continuations))
+           (read-global-state)))
+    ; restore the global state present at that time:
+    (set! generator-state (third state-to-read))
+    (set! reproduce-state (fourth state-to-read))
+    (set! shrinking (fifth state-to-read))
+    ; call the continuation:
+    ((first state-to-read) #f)))
+\end{lstlisting}
+
+\subsection{Shrinker}
+
+Our main logic for shrinking is in our \verb|make-random| function. The important parts for shrinking are shown in the snippet below.
+
+\begin{lstlisting}[language=lisp]
+(define ((make-random rand shrink name) . params)
+  (define reproduce ...)
+  ...
+  (cons (cons name params)
+    (if (not reproduce)
+      ; ... not reproduce case omitted ...
+      (let ((old (cdar reproduce-state)))
+        (set! reproduce-state (cdr reproduce-state))
+        (if shrinking
+          (cond
+            ((and
+               (> old 0)
+               (< (random-real) 0.5))
+             (set! shrinking #f)
+             (shrink old))
+            (else
+              (set! reproduce #f)
+              old))
+          old)))))
+\end{lstlisting}
+
+If we are in both in ``reproduce mode'' and \verb|shrinking| is true, then we shrink our old value using the provided \verb|shrink| procedure. We introduce some randomness, as it is sometimes unclear that a value cannot be shrunk further without breaking a predicate, for example if we have a generator 
+\begin{center}
+\verb|(g:restrict prime? (g:integer 200 250))|
+\end{center}
+and \verb|old| is \verb|211|, we do not want to repeatedly try to shrink until we find a number between 200 and 210 that is prime, because such a number does not exist. The \verb|shrink| for \verb|random| is simply \verb|random| which generates a new random number between 0 and the old value.
+
+To shrink combinators, we keep additional structure in our \verb|generator-state| for combinators. If we have a generator that generates a \verb|cons| of a \verb|list| and \verb|float|, the \verb|generator-state| after sampling will store the length of the list in addition to the elements.
+
+% update the example outputs with the new generator-state structure
+\begin{lstlisting}[language=lisp]
+(define ((g:list gen len))
+  ...
+  (set! generator-state (append original-state
+                                (list (cons (cons 'list len)
+                                            (cdr all-gen)))))
+ ...)
+
+ ....
+
+(define (random-length-list-and-float)
+  ((g:cons
+ 	(g:list (g:integer 0 10) ((g:integer 0 5)))
+ 	(g:float 0 5))))
+(sample-from random-length-list-and-float) 
+  ; => ((0 8 1) . 2.0696241484665436)
+generator-state 
+  ; => (((random 5) . 3) (cons (((list . 3) (((random 10) . 0)) (((random 10) . 8)) (((random 10) . 1)))) ((random-real) . .41392482969330874)))
+\end{lstlisting}
+If the generated 4-element list is shrunk to a 1-element list, we need to remove most of the \verb|reproduce-state| corresponding to the list:
+\begin{lstlisting}[language=lisp]
+(shrink random-length-list-and-float reproduce-state) 
+  ; => ((3) . 4.295354403700995)
+generator-state
+  ; => (((random 5) . 1) (cons (((list . 1) (((random 10) . 3)))) ((random-real) . .859070880740199)))
+\end{lstlisting}
+
+\subsection{Test}
+
+Our top-level \verb|test| function is a simple loop that attempts to find an input that fails the given property.
+\begin{lstlisting}
+(define (test f property generator #!optional times timeout)
+  (if (default-object? times)
+    (set! times 100))
+  (if (default-object? timeout)
+    (set! timeout 100))
+  (let lp ((n times))
+    (if (eq? n 0) #t
+      (let ((result (test-property 
+                      property 
+                      f 
+                      (sample-from generator)
+                      timeout)))
+        (if (eq? result #t) 
+          (lp (- n 1))
+          (test-shrinks f 
+                        property 
+                        generator 
+                        generator-state 
+                        timeout))))))
+\end{lstlisting}
+Our main loop runs a maximum of \verb|times| times, and in each iteration tests the property using \verb|test-property| using a fresh input from the generator. If the property passes, we try again, but if it does not, we attempt to shrink it inside \verb|test-shrinks|.
+
+Timeouts are handled within \verb|test-property|, and a default timeout of 100ms is given. If the function does not return in this time, we count this as a failed example and continue to shrink the input to find a minimal timing out example. This allows the user to find potential infinite loops, though if they find that the counterexample returned does satisfy their property, they may want to try supplying a longer timeout. In verbose mode, we print the cases that failed from a timeout, so users have more insight into why their code failed.
+
+\begin{lstlisting}
+(define (test-property property f input timeout)
+  (define done #f)
+  (register-timer-event 
+    timeout 
+    (lambda () (if (not done) (error "timed out"))))
+  (define result
+    (guard
+      (condition 
+        (else 
+          (if (equal? (error-object-message condition) 
+                      "timed out")
+              'time-out 
+              'internal-error)))
+      (property input (f input))))
+  (set! done #t)
+  result)
+\end{lstlisting}
+
+Once a counterexample is found we enter \verb|test-shrinks|, which attempts to shrink the input that failed the property. Here we count \verb|'time-out| and \verb|'internal-error| as a failed test, and continue to shrink until we find a minimal failing example.
+\begin{lstlisting}
+(define (test-shrinks f property generator original-state timeout)
+  (let lp ((n (max 100 (num-leaves original-state))))
+    (if (eq? n 0)
+      (reproduce generator original-state)
+      (let* ((input (shrink generator original-state))
+             (result (test-property property 
+                            f input timeout)))
+        (cond
+          ((or shrinking (eq? result #t))
+           (lp (- n 1)))
+          (else
+            (cond
+              (verbose
+                (cond ((eq? result 'time-out) 
+                       (display "failed (timeout): "))
+                      ((eq? result 'internal-error)
+                       (display "failed (internal error): "))
+                      (else (display "failed: ")))
+                (pp input)))
+            (test-shrinks f 
+                          property 
+                          generator 
+                          generator-state 
+                          timeout)))))))
+\end{lstlisting}

@@ -1,0 +1,115 @@
+
+\section{Applications}
+
+\subsection{Problem set 0}
+
+We can apply property based testing to simple applications such as problem set 0's cryptography. In problem set 0, we defined a system to use the Diffie-Hellman protocol to encode and decode messages. We can easily write tests to find minimal strings that are not handled by our system.
+
+\begin{lstlisting}[language=lisp]
+(define dh-system (public-dh-system 100))
+
+(define Alyssa (eg-receiver dh-system))
+
+(define (send-alyssa message)
+  (eg-send-message message Alyssa))
+
+(define (string-generator)
+  (let ((str-len ((g:integer 0 100))))
+    ((g:string (list "a" "b" "c" "d" "e") str-len))))
+
+(test send-alyssa equal? string-generator 100 10000)
+  ; =>  "caaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+\end{lstlisting}
+
+Sure enough, the returned string has 42 characters, which we found to be the failing point for this protocol.
+
+The \verb|prime?| predicate in problem set 0 used Fermat's Little Theorem to test for primality, which we know does not work in every case. We can define a \verb|better-prime?| predicate and feed it into our tester to allow us to find these so called Carmichael Numbers.
+\begin{lstlisting}
+(define (prime-property in out)
+  (eq? out (better-prime? in)))
+
+(test prime? prime-property (g:integer 0 1000))
+  ; => 561
+(test prime? prime-property (g:integer 1000 10000) 100 1000)
+  ; => 2465
+\end{lstlisting}
+
+\subsection{Symbolic arithmetic}
+
+We can also use property based testing to find behavior like floating point errors.
+
+First we define a generator \verb|gen-symbolic| to generate symbolic arithmetic expressions. This generates a symbolic expression containing arithmetic operators arbitrarily applied to floats and symbols \verb|a|, \verb|b|, and \verb|c|. Then we define a generator \verb|gen-symbolic-and-values| which produces a cons of a symbolic expression, and then assignments of values to \verb|a|, \verb|b|, and \verb|c|. 
+\begin{lstlisting}
+(define (gen-symbolic)
+  ((g:one-of
+     (g:random-choice '(a b c))
+     (g:float 0 1)
+     (g:cons
+       (g:random-choice '(+ - *))
+       (g:list gen-symbolic 2)))))
+
+(define gen-symbolic-and-values
+  (g:cons
+    gen-symbolic
+    (lambda ()
+      (list
+        (zip '(a b c) ((g:list (g:float 0 1) 3)))))))
+\end{lstlisting}
+One thing to note here is that this generator is recursive: if we write it carelessly, it can create an infinite recursion. Specifically, if the \verb|gen-symbolic| case occurs first instead of third, \verb|g:one-of| will shrink towards it and create longer and longer expressions. Furthermore, if \verb|gen-symbolic| calls itself more than once in expectation, it does not terminate with probability $1$. Since we want the test to not trigger our timeout due to the expression generated being too large, we have written \verb|gen-symbolic| so that it calls itself $\frac 23$ times in expectation.
+
+Then we define functions that allow us to substitute the values and evaluate.
+
+\begin{lstlisting}
+(define (substitute expr alist)
+  (if (pair? expr)
+    (cons (substitute (car expr) alist)
+          (substitute (cdr expr) alist))
+    (let ((expr-val (assq expr alist)))
+      (if (pair? expr-val)
+        (cadr expr-val)
+        expr))))
+
+(define (evaluate symbolic-and-values)
+  (eval (apply substitute symbolic-and-values) 
+        system-global-environment))
+\end{lstlisting}
+
+Now we can generate symbolic expressions and values associated, and evaluate the expressions using those values. One property that should hold is that simplifying the symbolic expression with \verb|algebra-2| from SDF, then evaluating should yield the same result as evaluating the symbolic expression. Let's test that.
+
+\begin{lstlisting}
+(define (simplification-works symbolic-and-values)
+  (define first (evaluate symbolic-and-values))
+  (define second
+     (evaluate
+       (cons
+         (algebra-2 (car symbolic-and-values))
+         (cdr symbolic-and-values))))
+  (= first second))
+\end{lstlisting}
+
+When we test with \verb|simplification-works|, we should get a counterexample in \verb|symbolic-and-values|.
+
+\begin{lstlisting}[language=lisp]
+(define symbolic-and-values
+  (test simplification-works
+        (lambda (in out) out)
+        gen-symbolic-and-values
+        1000
+        1000))
+(evaluate symbolic-and-values)    ; => 1.2306956622401857
+(evaluate
+    (cons
+      (algebra-2 (car symbolic-and-values))
+      (cdr symbolic-and-values))) ; => 1.230695662240186
+\end{lstlisting}
+
+We can find out what expressions, and what values substituted for them, produced the floating-point discrepancy:
+
+\begin{lstlisting}[language=lisp]
+(car symbolic-and-values)
+; => (+ (+ (- .33441419848879145 a) .8962814637513944) a)
+(algebra-2 (car symbolic-and-values))
+; => (+ .8962814637513944 a (- .33441419848879145 a))
+(cadr symbolic-and-values)
+; => ((a .6823164351138803) (b 0) (c 0))
+\end{lstlisting}

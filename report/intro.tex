@@ -1,0 +1,18 @@
+\section{Introduction}
+
+Property based testing was introduced in the QuickCheck Haskell framework in 1999 by Koen Claessen and John Hughes at Chalmers Institute of Technology. While it is widely understood that there is tremendous value in testing for software quality, there is a high cost associated with writing meaningful tests.
+
+Software behavior can be boiled down a collection of properties that specify the program. For example we might say that \verb|(my-sort lst)| that returns a value \verb|sorted| should exhibit the following properties:
+
+Given \verb|lst| is a \verb|list| of \verb|integer|s:
+\begin{itemize}
+    \item \verb|lst| and \verb|sorted| are the same length.
+    \item \verb|lst| and \verb|sorted| must have the same elements.
+    \item For every item $s_i=$\verb|(list-ref sorted i)| and \\$s_{i+1}=$\verb|(list-ref sorted (+ i 1))|, $s_{i+1}\geq s_i$.
+\end{itemize}
+
+The goal of property based testing is to use just these specifications to test a program's behavior over a large input space. Once a user specifies the preconditions and properties for their code, a property based testing framework generates many inputs that fit the preconditions until it finds one that violates the given property. Once it finds one, it shrinks the input value to produce a minimal counterexample, often more useful for debugging.
+
+Property based testing offers several benefits that complement more traditional methods. Classical testing methods such as fuzzing and hand written unit tests do offer an engineer some assurance that their program is correct, but excel either in input scope coverage or feature compliance. It may be hard to use a fuzzing approach to find useful bugs, and writing unit tests to cover a large domain of inputs is time consuming and challenging. Property based testing allows users to write arbitrarily simple or complex invariants, eliminating the need for many tedious boilerplate unit tests. For example, we could relax our property on \verb|my-sort| to test only that it maintains a list of the same length, or if we know for some reason that \verb|my-sort| struggles with prime numbers, write a test that restricts the input to a list of prime integers.
+
+In our framework, we supply a new \verb|test| procedure for MIT Scheme. We allow users to specify preconditions for their program by supplying a generator function composed from our supplied generator constructors. \verb|test| is called with a procedure to test, a Scheme function that tests for a property, and the generator, and returns the smallest input it can find from generator for which the procedure applied to the input fails the property.

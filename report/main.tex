@@ -1,0 +1,104 @@
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.20 of 2017/10/04
+%
+\documentclass[runningheads]{llncs}
+%
+\usepackage{graphicx}
+\usepackage{lipsum}
+% Used for displaying a sample figure. If possible, figure files should
+% be included in EPS format.
+%
+% If you use the hyperref package, please uncomment the following line
+% to display URLs in blue roman font according to Springer's eBook style:
+% \renewcommand\UrlFont{\color{blue}\rmfamily}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.95}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    % keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    % stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    escapeinside={(*}{*)}
+}
+
+\lstset{style=mystyle}
+
+
+
+\begin{document}
+%
+\title{Property Based Testing in MIT-Scheme}
+%
+% \titlerunning{Abbreviated paper title}
+% If the paper title is too long for the running head, you can set
+% an abbreviated paper title here
+%
+\author{Andres Buritica Monroy \and
+Rick Ono}
+%
+% \authorrunning{F. Author et al.}
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+\institute{}
+%
+\maketitle              % typeset the header of the contribution
+%
+% \begin{abstract}
+
+
+% \keywords{First keyword  \and Second keyword \and Another keyword.}
+% \end{abstract}
+%
+%
+%
+\include{intro.tex}
+\include{api.tex}
+\include{implementation}
+\include{applications}
+\include{conclusion}
+
+
+% TODO talk about how we satisfy predicates
+% (summary: every time (g:random) or (g:random-real) is called [also in (g:list) but that's not as important], we save the current program state to a list of continuations. If a predicate fails, we backtrack to the previous continuation; and if we have tried the current continuation 100 times we backtrack to the previous continuation [so that we can do things like the Pythagoras example at the end of tests.scm])
+
+% TODO add link to codebase
+
+% talk about applications like the symbolic algebra thing or the ps0 demo? not strictly necessary but i feel like sussman would like to see this
+
+%
+% the environments 'definition', 'lemma', 'proposition', 'corollary',
+% 'remark', and 'example' are defined in the LLNCS documentclass as well.
+%
+
+%
+% ---- Bibliography ----
+%
+% BibTeX users should specify bibliography style 'splncs04'.
+% References will then be sorted and formatted in the correct style.
+%
+% \bibliographystyle{refs-style}
+% \bibliography{refs}
+%
+\end{document}
+    
